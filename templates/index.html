@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciamento de Estacionamento</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #eef2f7; /* Fundo suave */
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            border-radius: 10px;
+        }
+        h1 {
+            color: #2c3e50; /* Título mais escuro */
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        #status-message {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-weight: bold;
+            color: #495057;
+            background-color: #e9ecef;
+            border: 1px solid #dee2e6;
+        }
+        #parking-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); /* 300px min-width cards */
+            gap: 20px;
+            margin-top: 30px;
+        }
+        .parking-card {
+            background-color: #ffffff;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            padding: 20px;
+            text-align: center;
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between; /* Espaçamento entre os elementos */
+            min-height: 120px; /* Altura mínima para o card */
+        }
+        .parking-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+        }
+        .card-header {
+            font-size: 1.4em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #34495e;
+        }
+        .card-location {
+            font-size: 0.9em;
+            color: #7f8c8d;
+            margin-bottom: 15px;
+        }
+        .card-status {
+            font-size: 1.2em;
+            font-weight: bold;
+            padding: 8px 15px;
+            border-radius: 5px;
+            margin-top: auto; /* Empurra para baixo */
+        }
+        .card-status.free {
+            background-color: #d4edda; /* Verde claro */
+            color: #155724; /* Verde escuro */
+            border: 1px solid #28a745;
+        }
+        .card-status.occupied {
+            background-color: #f8d7da; /* Vermelho claro */
+            color: #721c24; /* Vermelho escuro */
+            border: 1px solid #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Monitoramento de Vagas de Estacionamento</h1>
+        <div id="status-message">Conectando ao servidor...</div>
+        <div id="parking-cards-grid">
+            <!-- Os cards das vagas serão inseridos aqui pelo JavaScript -->
+        </div>
+    </div>
+
+    <script>
+        const socket = io.connect('http://127.0.0.1:5000');
+        const parkingCardsGrid = document.getElementById('parking-cards-grid');
+        const statusMessage = document.getElementById('status-message');
+        let initialParkingZonesOrder = []; // Para manter a ordem das vagas
+
+        socket.on('connect', function() {
+            console.log('Conectado ao servidor WebSocket!');
+            statusMessage.textContent = 'Status: Conectado. Aguardando atualizações...';
+            statusMessage.style.backgroundColor = '#d4edda'; // Verde claro para conectado
+            statusMessage.style.borderColor = '#28a745';
+            statusMessage.style.color = '#155724';
+        });
+
+        socket.on('disconnect', function() {
+            console.log('Desconectado do servidor WebSocket.');
+            statusMessage.textContent = 'Status: Desconectado. Tentando reconectar...';
+            statusMessage.style.backgroundColor = '#f8d7da'; // Vermelho claro para desconectado
+            statusMessage.style.borderColor = '#dc3545';
+            statusMessage.style.color = '#721c24';
+        });
+
+        socket.on('parking_update', function(data) {
+            console.log('Atualização de estacionamento recebida:', data);
+            
+            // Se for a primeira atualização, cria os cards na grade
+            if (initialParkingZonesOrder.length === 0) {
+                initialParkingZonesOrder = Object.keys(data); // Pega as IDs das vagas na ordem que vieram
+                parkingCardsGrid.innerHTML = ''; // Limpa a grade antes de adicionar os cards
+                
+                initialParkingZonesOrder.forEach(zoneId => {
+                    const cardDiv = document.createElement('div');
+                    cardDiv.id = `spot-card-${zoneId}`;
+                    cardDiv.classList.add('parking-card');
+                    cardDiv.innerHTML = `
+                        <div class="card-header">${zoneId}</div>
+                        <div class="card-location">Localização: Setor Padrão</div> <!-- Exemplo, pode ser dinâmico -->
+                        <div class="card-status"></div>
+                    `;
+                    parkingCardsGrid.appendChild(cardDiv);
+                });
+            }
+
+            // Atualiza o estado de cada card
+            for (const zoneId in data) {
+                const cardDiv = document.getElementById(`spot-card-${zoneId}`);
+                if (cardDiv) {
+                    const statusDiv = cardDiv.querySelector('.card-status');
+                    statusDiv.classList.remove('free', 'occupied'); // Remove classes anteriores
+                    statusDiv.classList.add(data[zoneId]); // Adiciona 'free' ou 'occupied'
+                    statusDiv.textContent = data[zoneId] === 'free' ? 'LIVRE' : 'OCUPADA';
+                }
+            }
+        });
+    </script>
+</body>
+</html>
