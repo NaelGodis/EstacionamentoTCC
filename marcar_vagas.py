@@ -73,7 +73,7 @@ def main():
     print("\n\n=== COPIE E COLE ISSO NO SEU CÓDIGO PRINCIPAL (estacionamento.py) ===")
     print("vagas_config = [")
     for i, vaga in enumerate(todas_vagas):
-        # Formata bonitinho para copiar
+    
         coords = ", ".join([f"[{p[0]}, {p[1]}]" for p in vaga])
         print(f"    np.array([{coords}], np.int32), # Vaga {i+1}")
     print("]")

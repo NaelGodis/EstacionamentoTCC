@@ -13,7 +13,7 @@ import threading
 YOLO_MODEL_PATH = 'yolov8n.pt'
 VIDEO_SOURCE = 'video_cortado.mp4'
 
-# --- COLOQUE A SAÍDA DA SUA FERRAMENTA 'marcar_vagas.py' AQUI ---
+# --- Vetores das vagas ---
 PARKING_POLYGONS_CONFIG = [
     np.array([[120, 611], [241, 622], [316, 474], [199, 466]], np.int32), # Vaga 1
     np.array([[242, 622], [316, 478], [438, 469], [396, 622]], np.int32), # Vaga 2
@@ -49,7 +49,7 @@ current_parking_status = {}
 global_processed_frame = None # Para o feed de vídeo na web, se quisermos mais tarde
 frame_lock = threading.Lock() # Para proteger o acesso a global_processed_frame
 
-# --- Funções Auxiliares (mantidas) ---
+# --- Funções Auxiliares  ---
 def is_vehicle_in_zone(vehicle_box, zone_polygon):
     x1, y1, x2, y2 = map(int, vehicle_box[:4])
     center_x, center_y = (x1 + x2) // 2, (y1 + y2) // 2
@@ -69,7 +69,7 @@ def test_connect():
 def test_disconnect():
     print('Cliente WebSocket desconectado.')
 
-# --- Lógica de Processamento de Vídeo (agora em uma thread separada) ---
+# --- Lógica de Processamento de Vídeo  ---
 def video_processing_thread():
     """
     Thread responsável por processar o vídeo, atualizar o status das vagas
@@ -86,7 +86,7 @@ def video_processing_thread():
         cap = cv2.VideoCapture(VIDEO_SOURCE)
         if not cap.isOpened():
             print(f"[THREAD VÍDEO] ERRO: Não foi possível abrir a fonte de vídeo: {VIDEO_SOURCE}")
-            # Certifique-se de que a thread principal saiba que algo deu errado, ou apenas sai
+           
             return
 
         for i, _ in enumerate(PARKING_POLYGONS_CONFIG):
@@ -128,8 +128,7 @@ def video_processing_thread():
             # Emitir atualização apenas se houver mudança
             if new_parking_status != current_parking_status:
                 current_parking_status = new_parking_status
-                # Usar socketio.emit para emitir da thread secundaria
-                # É importante usar `socketio.emit` do contexto do Flask-SocketIO para threads
+                 
                 with app.test_request_context(): # Garante um contexto de app para emit
                      socketio.emit('parking_update', current_parking_status)
                 # print("[THREAD VÍDEO] Emitindo atualização:", current_parking_status)
@@ -152,8 +151,8 @@ def video_processing_thread():
             with frame_lock:
                 global_processed_frame = processed_frame
 
-            # Controle de FPS para a thread de vídeo
-            # time.sleep(0.01) # Descomente para limitar FPS se o sistema estiver sobrecarregado
+            # Controle de FPS para a thread de vídeo-atraso para não sobrecarregar a CPU
+            time.sleep(0.01) 
 
         cap.release()
         print("[THREAD VÍDEO] Processamento de vídeo finalizado.")
